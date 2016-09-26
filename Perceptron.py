@@ -34,7 +34,7 @@ class Perceptron:
     self.input = []
     self.output = []
     self.threshold = 0
-    self.lrate = 0.0005
+    self.lrate = 0.1
 
   #############################################################################
   # TODO TODO TODO TODO TODO 
@@ -46,12 +46,10 @@ class Perceptron:
       'words' is a list of words to classify. Return 'pos' or 'neg' classification.
     """
     # Write code here
-    words = self.filterStopWords(words)
     classify_map = defaultdict(int)
     for word in words:
-      classify_map[word]=1
-      # classify_map[word]+=1
-    # self.normalize(classify_map)
+      classify_map[word]+=1
+    self.normalize(classify_map)
     return "pos" if self.output_res(classify_map) >= self.threshold else "neg"
   
 
@@ -69,12 +67,10 @@ class Perceptron:
     words = self.filterStopWords(words)
     word_map = defaultdict(int) 
     for word in words:
-      if word not in word_map:
-        word_map[word] = 1
-        # word_map[word] += 1
+      word_map[word] += 1
       if word not in self.weights:
         self.weights[word] = random.random()
-    # self.normalize(word_map)
+    self.normalize(word_map)
     self.input.append(copy.deepcopy(word_map))
     self.output.append(1 if klass == "pos" else -1) 
 
@@ -91,6 +87,10 @@ class Perceptron:
       words = example.words
       self.addExample(example.klass, words)
 
+    # for word_map in self.input:
+    #   for key in word_map:
+    #     if key not in self.weights:
+    #       self.weights[key] = random.random()
     for i in range(iterations):
       totalError = 0
       for j in range(len(self.output)):
@@ -107,9 +107,13 @@ class Perceptron:
         break
 
   def output_res(self, _input):
-    _sum = 0.0   
+    _sum = 0.0
+    # print _input
+    # sys.exit()    
     for word in _input:
       _sum+=self.weights[word]*_input[word]
+    # print _sum
+    # sys.exit()
     return 1 if _sum > self.threshold else -1
 
 
