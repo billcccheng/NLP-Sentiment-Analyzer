@@ -6,6 +6,9 @@ import operator
 import random
 from collections import defaultdict
 import copy
+import numpy as np
+import scipy as sp
+import scipy.stats
 
 class Perceptron:
   class TrainSplit:
@@ -201,7 +204,7 @@ class Perceptron:
         filtered.append(word)
     return filtered
 
-def test10Fold(args):
+def test10Fold(args, accuracy_res):
   pt = Perceptron()
   
   iterations = int(args[1])
@@ -223,6 +226,7 @@ def test10Fold(args):
     avgAccuracy += accuracy
     print '[INFO]\tFold %d Accuracy: %f' % (fold, accuracy) 
     fold += 1
+    accuracy_res.append(accuracy_res)
   avgAccuracy = avgAccuracy / fold
   print '[INFO]\tAccuracy: %f' % avgAccuracy
     
@@ -242,14 +246,23 @@ def classifyDir(trainDir, testDir,iter):
       accuracy += 1.0
   accuracy = accuracy / len(testSplit.train)
   print '[INFO]\tAccuracy: %f' % accuracy
+
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0*np.array(data)
+    n = len(a)
+    m, se = np.mean(a), scipy.stats.sem(a)
+    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+    return m-h, m, m+h, h
+
     
 def main():
   (options, args) = getopt.getopt(sys.argv[1:], '')
-  
+  accuracy_res = []
   if len(args) == 3:
     classifyDir(args[0], args[1], args[2])
   elif len(args) == 2:
-    test10Fold(args)
-
+    test10Fold(args, accuracy_res)
+  print mean_confidence_interval(accuracy_res)
+    
 if __name__ == "__main__":
     main()
