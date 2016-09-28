@@ -4,6 +4,9 @@ import os
 import math
 import operator
 from collections import defaultdict
+import numpy as np
+import scipy as sp
+import scipy.stats
 
 class NaiveBayes:
   class TrainSplit:
@@ -33,6 +36,7 @@ class NaiveBayes:
     self.total_num_word_in_pos = 0
     self.total_num_word_in_neg = 0
     self.map = defaultdict(lambda: defaultdict(int))
+    self.text = defaultdict(int)
 
 
   #############################################################################
@@ -51,26 +55,25 @@ class NaiveBayes:
     """ TODO
       'words' is a list of words to classify. Return 'pos' or 'neg' classification.
     """
-    # if not self.BOOLEAN_NB:
-    if self.FILTER_STOP_WORDS:
-      words =  self.filterStopWords(words)
     # Write code here
+    if self.FILTER_STOP_WORDS or self.BOOLEAN_NB:
+      words =  self.filterStopWords(words)
     prior_pos = float(self.POS_CLASS)/(self.POS_CLASS + self.NEG_CLASS)
     prior_neg = float(self.NEG_CLASS)/(self.POS_CLASS + self.NEG_CLASS)
     pos_prob, neg_prob = 0, 0
     for word in words:
-      count_word_in_class_pos = self.map[word]["pos"]
       #used log to make the data more visualizable
-      pos_prob += math.log(float(count_word_in_class_pos+1) /  self.total_num_word_in_pos)
+      count_word_in_class_pos = self.map["pos"][word]
+      pos_prob += math.log(float(count_word_in_class_pos+1) / (self.total_num_word_in_pos + len(self.text)))
 
-      count_word_in_class_neg = self.map[word]["neg"]
-      neg_prob += math.log(float(count_word_in_class_neg+1) /  self.total_num_word_in_neg)
-    
+      count_word_in_class_neg = self.map["neg"][word]
+      neg_prob += math.log(float(count_word_in_class_neg+1) / (self.total_num_word_in_neg + len(self.text)))
+
     pos_prob += math.log(prior_pos)
     neg_prob += math.log(prior_neg)
 
 
-    return "pos" if (pos_prob - neg_prob) > 0 else "neg"
+    return "pos" if pos_prob > neg_prob else "neg"
 
   def addExample(self, klass, words):
     """
@@ -82,8 +85,8 @@ class NaiveBayes:
      * Returns nothing
     """
     # Write code here
-    if self.FILTER_STOP_WORDS:
-      words =  self.filterStopWords(words)
+    if self.FILTER_STOP_WORDS or self.BOOLEAN_NB:
+      words = self.filterStopWords(words)
     
     if not self.BOOLEAN_NB:
       if klass == "pos":
@@ -96,21 +99,22 @@ class NaiveBayes:
           self.total_num_word_in_pos += 1  
         else: 
           self.total_num_word_in_neg += 1
-        self.map[word][klass]+=1
+        self.map[klass][word]+=1
+        self.text[word] += 1
     # This part is for Binarized NB
     else:
-      for word in words:
-        if klass == "pos":
-          self.POS_CLASS+=1  
-        else:
-          self.NEG_CLASS+=1
+      if klass == "pos":
+        self.POS_CLASS+=1  
+      else:
+        self.NEG_CLASS+=1
 
-      for word in list(set(words)):
+      for word in set(words):
         if klass == "pos":
           self.total_num_word_in_pos += 1  
         else: 
           self.total_num_word_in_neg += 1
-        self.map[word][klass]+=1
+        self.map[klass][word] += 1
+        self.text[word] += 1
     pass
       
 
@@ -201,13 +205,14 @@ class NaiveBayes:
         filtered.append(word)
     return filtered
 
-def test10Fold(args, FILTER_STOP_WORDS, BOOLEAN_NB):
+def test10Fold(args, FILTER_STOP_WORDS, BOOLEAN_NB, accuracy_res):
   nb = NaiveBayes()
   #splits = split(train(example(klass, words)), test(example(klass, words)))
   splits = nb.crossValidationSplits(args[0])
   # print splits[0].train[0].words
   avgAccuracy = 0.0
   fold = 0
+  # print len(splits) == 10 
   for split in splits:
     classifier = NaiveBayes()
     classifier.FILTER_STOP_WORDS = FILTER_STOP_WORDS
@@ -227,6 +232,7 @@ def test10Fold(args, FILTER_STOP_WORDS, BOOLEAN_NB):
     avgAccuracy += accuracy
     print '[INFO]\tFold %d Accuracy: %f' % (fold, accuracy) 
     fold += 1
+    accuracy_res.append(accuracy)
   avgAccuracy = avgAccuracy / fold
   print '[INFO]\tAccuracy: %f' % avgAccuracy
     
@@ -247,10 +253,17 @@ def classifyDir(FILTER_STOP_WORDS, BOOLEAN_NB, trainDir, testDir):
   accuracy = accuracy / len(testSplit.train)
   print '[INFO]\tAccuracy: %f' % accuracy
 
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0*np.array(data)
+    n = len(a)
+    m, se = np.mean(a), scipy.stats.sem(a)
+    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+    return m-h, m, m+h, h
 
 def main():
   FILTER_STOP_WORDS = False
   BOOLEAN_NB = False
+  accuracy_res = []
   (options, args) = getopt.getopt(sys.argv[1:], 'fbm')
   if ('-f','') in options:
     FILTER_STOP_WORDS = True
@@ -260,7 +273,9 @@ def main():
   if len(args) == 2:
     classifyDir(FILTER_STOP_WORDS, BOOLEAN_NB,  args[0], args[1])
   elif len(args) == 1:
-    test10Fold(args, FILTER_STOP_WORDS, BOOLEAN_NB)
-
+    test10Fold(args, FILTER_STOP_WORDS, BOOLEAN_NB, accuracy_res)
+  # print accuracy_res
+  print mean_confidence_interval(accuracy_res)
+    
 if __name__ == "__main__":
     main()
