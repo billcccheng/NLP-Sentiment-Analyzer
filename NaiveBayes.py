@@ -36,7 +36,6 @@ class NaiveBayes:
     self.total_num_word_in_pos = 0
     self.total_num_word_in_neg = 0
     self.map = defaultdict(lambda: defaultdict(int))
-    self.text = defaultdict(int)
 
 
   #############################################################################
@@ -64,10 +63,10 @@ class NaiveBayes:
     for word in words:
       #used log to make the data more visualizable
       count_word_in_class_pos = self.map["pos"][word]
-      pos_prob += math.log(float(count_word_in_class_pos+1) / (self.total_num_word_in_pos + len(self.text)))
+      pos_prob += math.log(float(count_word_in_class_pos+1) / (self.total_num_word_in_pos))
 
       count_word_in_class_neg = self.map["neg"][word]
-      neg_prob += math.log(float(count_word_in_class_neg+1) / (self.total_num_word_in_neg + len(self.text)))
+      neg_prob += math.log(float(count_word_in_class_neg+1) / (self.total_num_word_in_neg))
 
     pos_prob += math.log(prior_pos)
     neg_prob += math.log(prior_neg)
@@ -100,7 +99,6 @@ class NaiveBayes:
         else: 
           self.total_num_word_in_neg += 1
         self.map[klass][word]+=1
-        self.text[word] += 1
     # This part is for Binarized NB
     else:
       if klass == "pos":
@@ -114,7 +112,6 @@ class NaiveBayes:
         else: 
           self.total_num_word_in_neg += 1
         self.map[klass][word] += 1
-        self.text[word] += 1
     pass
       
 
